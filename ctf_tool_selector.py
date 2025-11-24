@@ -949,9 +949,10 @@ def install_tools_windows() -> bool:
         
         try:
             if package_manager == "winget":
-                print(f"   Running: winget install {package_name} -e --silent")
+                # Remove --silent to show output, but use --accept-package-agreements and --accept-source-agreements
+                print(f"   Running: winget install {package_name} -e --accept-package-agreements --accept-source-agreements")
                 result = subprocess.run(
-                    ["winget", "install", package_name, "-e", "--silent"],
+                    ["winget", "install", package_name, "-e", "--accept-package-agreements", "--accept-source-agreements"],
                     timeout=300
                 )
             else:  # choco
@@ -979,6 +980,8 @@ def install_tools_windows() -> bool:
                 installed_count += 1
             else:
                 print(f"   ⚠️  Failed (exit code: {result.returncode})")
+                if result.stderr:
+                    print(f"   Error output: {result.stderr.decode('utf-8', errors='ignore')[:200]}")
                 failed_count += 1
         except subprocess.TimeoutExpired:
             print("   ⚠️  Failed (timeout after 5 minutes)")
