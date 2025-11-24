@@ -28,6 +28,11 @@ wheels/
 *.exe
 *.app
 
+# Build artifacts
+*.zip
+dist/
+build/
+
 # IDE
 .vscode/
 .idea/
