@@ -855,18 +855,57 @@ def install_tools_windows() -> bool:
         return False
     
     if not choco_available:
-        print("[!] Chocolatey not found. Installing Chocolatey...")
+        print("\n[!] Chocolatey not found. Installing Chocolatey automatically...")
+        print("   This requires administrator privileges.")
+        print("   Running PowerShell installation script...")
+        print("   Executing: powershell -NoProfile -ExecutionPolicy Bypass")
         try:
-            subprocess.run(
-                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
-                 "Set-ExecutionPolicy Bypass -Scope Process; "
-                 "[System.Net.ServicePointManager]::SecurityProtocol = 3072; "
-                 "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"],
-                check=True
+            # Use Start-Process to run as admin if needed
+            ps_script = """
+            Set-ExecutionPolicy Bypass -Scope Process -Force;
+            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
+            iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+            """
+            
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
+                timeout=300,
+                check=False
             )
-            choco_available = True
-        except subprocess.CalledProcessError:
-            print("[!] Failed to install Chocolatey. Some tools may not install.")
+            
+            if result.returncode == 0:
+                print("   ✅ Chocolatey installation completed")
+                # Add Chocolatey to PATH for current session
+                choco_path = r"C:\ProgramData\chocolatey\bin"
+                current_path = os.environ.get('PATH', '')
+                if choco_path not in current_path:
+                    os.environ['PATH'] = current_path + ';' + choco_path
+                
+                # Verify installation
+                choco_available = shutil.which("choco") is not None
+                if choco_available:
+                    print("   ✅ Chocolatey is now available")
+                else:
+                    # Try direct path
+                    choco_exe = os.path.join(choco_path, "choco.exe")
+                    if os.path.exists(choco_exe):
+                        print("   ✅ Chocolatey installed (may need terminal restart for PATH)")
+                        choco_available = True
+                    else:
+                        print("   ⚠️  Chocolatey may need a terminal restart to be available")
+                        print("   Continuing installation - will use full path if needed")
+            else:
+                print(f"   ⚠️  Chocolatey installation returned exit code: {result.returncode}")
+                print("   This may require running as administrator.")
+                print("   Some tools may not install. You can install Chocolatey manually:")
+                print("   https://chocolatey.org/install")
+        except subprocess.TimeoutExpired:
+            print("   ⚠️  Chocolatey installation timed out (took longer than 5 minutes)")
+            print("   Some tools may not install.")
+        except Exception as e:
+            print(f"   ⚠️  Failed to install Chocolatey: {e}")
+            print("   Some tools may not install. You can install Chocolatey manually:")
+            print("   https://chocolatey.org/install")
     
     tools_to_install = [
         ("ExifTool", "winget", "PhilHarvey.ExifTool", None),
@@ -898,9 +937,15 @@ def install_tools_windows() -> bool:
             continue
         
         if package_manager == "choco" and not choco_available:
-            print("   ⚠️  Skipped (chocolatey not available)")
-            failed_count += 1
-            continue
+            # Try to find choco.exe directly even if not in PATH
+            choco_exe = r"C:\ProgramData\chocolatey\bin\choco.exe"
+            if os.path.exists(choco_exe):
+                print(f"   Using Chocolatey from: {choco_exe}")
+                choco_available = True
+            else:
+                print("   ⚠️  Skipped (chocolatey not available)")
+                failed_count += 1
+                continue
         
         try:
             if package_manager == "winget":
@@ -910,9 +955,22 @@ def install_tools_windows() -> bool:
                     timeout=300
                 )
             else:  # choco
-                print(f"   Running: choco install {package_name} -y")
+                # Use full path if choco not in PATH
+                choco_cmd = "choco"
+                if not shutil.which("choco"):
+                    choco_exe = r"C:\ProgramData\chocolatey\bin\choco.exe"
+                    if os.path.exists(choco_exe):
+                        choco_cmd = choco_exe
+                        print(f"   Running: {choco_cmd} install {package_name} -y")
+                    else:
+                        print(f"   ⚠️  Chocolatey executable not found")
+                        failed_count += 1
+                        continue
+                else:
+                    print(f"   Running: choco install {package_name} -y")
+                
                 result = subprocess.run(
-                    ["choco", "install", package_name, "-y"],
+                    [choco_cmd, "install", package_name, "-y"],
                     timeout=300
                 )
             
