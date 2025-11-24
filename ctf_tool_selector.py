@@ -888,40 +888,48 @@ def install_tools_windows() -> bool:
     failed_count = 0
     
     for tool_name, package_manager, package_name, _ in tools_to_install:
-        print(f"🔹 Installing {tool_name}...", end=" ", flush=True)
+        print(f"\n🔹 Installing {tool_name}...")
+        print(f"   Package: {package_name}")
+        print(f"   Manager: {package_manager}")
         
         if package_manager == "winget" and not winget_available:
-            print("⚠️  Skipped (winget not available)")
+            print("   ⚠️  Skipped (winget not available)")
             failed_count += 1
             continue
         
         if package_manager == "choco" and not choco_available:
-            print("⚠️  Skipped (chocolatey not available)")
+            print("   ⚠️  Skipped (chocolatey not available)")
             failed_count += 1
             continue
         
         try:
             if package_manager == "winget":
+                print(f"   Running: winget install {package_name} -e --silent")
                 result = subprocess.run(
                     ["winget", "install", package_name, "-e", "--silent"],
-                    capture_output=True,
                     timeout=300
                 )
             else:  # choco
+                print(f"   Running: choco install {package_name} -y")
                 result = subprocess.run(
                     ["choco", "install", package_name, "-y"],
-                    capture_output=True,
                     timeout=300
                 )
             
             if result.returncode == 0:
-                print("✅")
+                print("   ✅ Success")
                 installed_count += 1
             else:
-                print("⚠️  Failed")
+                print(f"   ⚠️  Failed (exit code: {result.returncode})")
                 failed_count += 1
-        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
-            print("⚠️  Failed")
+        except subprocess.TimeoutExpired:
+            print("   ⚠️  Failed (timeout after 5 minutes)")
+            failed_count += 1
+        except FileNotFoundError:
+            print("   ⚠️  Failed (command not found)")
+            failed_count += 1
+        except Exception as e:
+            print(f"   ⚠️  Failed: {e}")
             failed_count += 1
     
     print(f"\n✅ Installed: {installed_count}")
@@ -1035,11 +1043,13 @@ def install_tools_linux() -> bool:
     
     for tool_name, package_name in tools_to_install:
         if package_name is None:
-            print(f"🔹 {tool_name}... ⚠️  Manual installation required")
+            print(f"\n🔹 {tool_name}...")
+            print("   ⚠️  Manual installation required")
             skipped_count += 1
             continue
         
-        print(f"🔹 Installing {tool_name}...", end=" ", flush=True)
+        print(f"\n🔹 Installing {tool_name}...")
+        print(f"   Package: {package_name}")
         
         try:
             if package_manager == "apt":
@@ -1051,16 +1061,23 @@ def install_tools_linux() -> bool:
             else:  # pacman
                 cmd = ["sudo", "pacman", "-S", "--noconfirm", package_name]
             
-            result = subprocess.run(cmd, capture_output=True, timeout=300)
+            print(f"   Running: {' '.join(cmd)}")
+            result = subprocess.run(cmd, timeout=300)
             
             if result.returncode == 0:
-                print("✅")
+                print("   ✅ Success")
                 installed_count += 1
             else:
-                print("⚠️  Failed")
+                print(f"   ⚠️  Failed (exit code: {result.returncode})")
                 failed_count += 1
-        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
-            print("⚠️  Failed")
+        except subprocess.TimeoutExpired:
+            print("   ⚠️  Failed (timeout after 5 minutes)")
+            failed_count += 1
+        except FileNotFoundError:
+            print("   ⚠️  Failed (command not found)")
+            failed_count += 1
+        except Exception as e:
+            print(f"   ⚠️  Failed: {e}")
             failed_count += 1
     
     print(f"\n✅ Installed: {installed_count}")
@@ -1101,23 +1118,30 @@ def install_tools_macos() -> bool:
     failed_count = 0
     
     for tool_name, package_name in tools_to_install:
-        print(f"🔹 Installing {tool_name}...", end=" ", flush=True)
+        print(f"\n🔹 Installing {tool_name}...")
+        print(f"   Package: {package_name}")
         
         try:
+            print(f"   Running: brew install {package_name}")
             result = subprocess.run(
                 ["brew", "install", package_name],
-                capture_output=True,
                 timeout=600
             )
             
             if result.returncode == 0:
-                print("✅")
+                print("   ✅ Success")
                 installed_count += 1
             else:
-                print("⚠️  Failed")
+                print(f"   ⚠️  Failed (exit code: {result.returncode})")
                 failed_count += 1
-        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
-            print("⚠️  Failed")
+        except subprocess.TimeoutExpired:
+            print("   ⚠️  Failed (timeout after 10 minutes)")
+            failed_count += 1
+        except FileNotFoundError:
+            print("   ⚠️  Failed (brew not found)")
+            failed_count += 1
+        except Exception as e:
+            print(f"   ⚠️  Failed: {e}")
             failed_count += 1
     
     print(f"\n✅ Installed: {installed_count}")
