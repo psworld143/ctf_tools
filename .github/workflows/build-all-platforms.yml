@@ -1,0 +1,95 @@
+name: Build All Platforms
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: |
+          pyinstaller --onefile `
+            --name "CTF_Tool_Selector" `
+            --console `
+            --add-data "ai_providers.sql;." `
+            --clean --noconfirm `
+            ctf_tool_selector.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CTF_Tool_Selector-Windows
+          path: dist/CTF_Tool_Selector.exe
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: |
+          pyinstaller --onefile \
+            --name "CTF_Tool_Selector" \
+            --console \
+            --add-data "ai_providers.sql:." \
+            --clean --noconfirm \
+            ctf_tool_selector.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CTF_Tool_Selector-Linux
+          path: dist/CTF_Tool_Selector
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: |
+          pyinstaller --onefile \
+            --name "CTF_Tool_Selector" \
+            --console \
+            --add-data "ai_providers.sql:." \
+            --clean --noconfirm \
+            ctf_tool_selector.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CTF_Tool_Selector-macOS
+          path: dist/CTF_Tool_Selector
+
+  create-release:
+    name: Create Release
+    needs: [build-windows, build-linux, build-macos]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/CTF_Tool_Selector-Windows/CTF_Tool_Selector.exe
+            artifacts/CTF_Tool_Selector-Linux/CTF_Tool_Selector
+            artifacts/CTF_Tool_Selector-macOS/CTF_Tool_Selector
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

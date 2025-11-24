@@ -35,6 +35,67 @@ pip install -r requirements.txt
 python3 ctf_tool_selector.py
 ```
 
+## Building Executables
+
+### Automated Builds (GitHub Actions)
+
+**Windows builds are automatically created** on every push to the main branch using GitHub Actions!
+
+1. **Download Latest Build**: Go to the [Actions](https://github.com/psworld143/ctf_tools/actions) tab
+2. Click on the latest workflow run
+3. Download the `CTF_Tool_Selector-Windows` artifact
+
+**Builds are triggered on:**
+- Every push to `main` branch
+- Pull requests
+- Tags starting with `v*` (creates releases)
+- Manual workflow dispatch
+
+### Manual Build (Local)
+
+#### On Windows:
+
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+2. Run the build script:
+```bash
+build_windows.bat
+```
+
+Or manually with PyInstaller:
+```bash
+pyinstaller --onefile --name "CTF_Tool_Selector" --console --add-data "ai_providers.sql;." ctf_tool_selector.py
+```
+
+The executable will be created in the `dist` folder as `CTF_Tool_Selector.exe`.
+
+#### On Linux/macOS:
+
+Use the same PyInstaller command but with Linux/macOS path separators:
+```bash
+pyinstaller --onefile --name "CTF_Tool_Selector" --console --add-data "ai_providers.sql:." ctf_tool_selector.py
+```
+
+### Build Options:
+
+- **One-file executable**: Single executable file (larger size, easier distribution)
+- **Console mode**: Shows command-line interface
+- **Includes data files**: Automatically bundles `ai_providers.sql`
+
+### Distribution:
+
+The generated executables can be distributed to users without requiring Python installation. All dependencies are bundled into the executable.
+
+### Creating Releases:
+
+To create a release with pre-built executables:
+1. Create a tag: `git tag v1.0.0`
+2. Push the tag: `git push origin v1.0.0`
+3. GitHub Actions will automatically build and create a release with Windows, Linux, and macOS executables
+
 ## Usage
 
 ### Interactive Tool Selector

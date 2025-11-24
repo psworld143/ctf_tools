@@ -23,6 +23,11 @@ wheels/
 .installed.cfg
 *.egg
 
+# PyInstaller
+*.spec
+*.exe
+*.app
+
 # IDE
 .vscode/
 .idea/
